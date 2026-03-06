@@ -170,6 +170,8 @@ def build_portfolio(client_id: str) -> Optional[PortfolioSummary]:
         return mv
 
     h["market_value_usd"] = h.apply(calc_mv, axis=1)
+    # Reemplazar NaN por 0 (instrumentos sin precio disponible)
+    h["market_value_usd"] = h["market_value_usd"].fillna(0)
     total = h["market_value_usd"].sum()
     if total == 0:
         return None
