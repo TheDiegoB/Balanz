@@ -37,6 +37,10 @@ st.markdown("""
 html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 [data-testid="stSidebar"] { background: #1B2A4A; }
 [data-testid="stSidebar"] * { color: white !important; }
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] { background: rgba(255,255,255,0.05) !important; border: 1px dashed rgba(255,255,255,0.2) !important; border-radius: 8px !important; }
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] { background: #2E4D8A !important; color: white !important; border: 1px solid #4A7FC1 !important; border-radius: 6px !important; }
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover { background: #4A7FC1 !important; }
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] * { color: rgba(255,255,255,0.45) !important; font-size: 11px !important; }
 [data-testid="stMetric"] {
     background: white; border: 1px solid #E8EDF5;
     border-radius: 10px; padding: 16px 20px !important;
