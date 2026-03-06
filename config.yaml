@@ -1,282 +1,232 @@
 """
-Portfolio Lab — Motor de cálculo
-Cálculos de retorno, duration, exposición, concentración y riesgo.
+Portfolio Lab — Generador de reportes HTML/PDF
 """
 from __future__ import annotations
-import pandas as pd
-import numpy as np
-import yaml
+import io
+from datetime import date
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Optional
+from engine.analytics import PortfolioSummary, load_config
 
-# ── Paths ────────────────────────────────────────────────────────────────────
-BASE_DIR    = Path(__file__).parent.parent
-CONFIG_PATH = BASE_DIR / "config.yaml"
-DATA_DIR    = BASE_DIR / "data"
-
-def load_config() -> dict:
-    with open(CONFIG_PATH) as f:
-        return yaml.safe_load(f)
-
-# ── Data loaders ─────────────────────────────────────────────────────────────
-
-def load_clients() -> pd.DataFrame:
-    return pd.read_csv(DATA_DIR / "clients.csv", dtype=str).fillna("")
-
-def load_holdings() -> pd.DataFrame:
-    df = pd.read_csv(DATA_DIR / "holdings.csv", dtype=str)
-    num_cols = ["quantity","price_override","market_value_override",
-                "ytm_override","duration_override","risk_score_override"]
-    for c in num_cols:
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df
-
-def load_master() -> pd.DataFrame:
-    df = pd.read_csv(DATA_DIR / "instruments_master.csv", dtype=str)
-    num_cols = ["default_ytm","default_duration","default_risk_score"]
-    for c in num_cols:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df
-
-# ── Price fetcher ─────────────────────────────────────────────────────────────
-
-def fetch_prices(tickers: list[str]) -> dict[str, float]:
-    """Intenta yfinance; si falla devuelve dict vacío (modo offline)."""
-    prices = {}
-    if not tickers:
-        return prices
-    try:
-        import yfinance as yf
-        raw = yf.download(tickers, period="1d", auto_adjust=True, progress=False)
-        if "Close" in raw.columns:
-            last = raw["Close"].iloc[-1]
-            if isinstance(last, pd.Series):
-                prices = last.dropna().to_dict()
-            else:
-                prices = {tickers[0]: float(last)} if not np.isnan(last) else {}
-    except Exception:
-        pass
-    return prices
-
-# ── FX ────────────────────────────────────────────────────────────────────────
-
-def get_fx_ars_to_usd(config: dict) -> float:
-    """TC ARS→USD: intenta dolarapi, fallback a config."""
-    try:
-        import urllib.request, json
-        with urllib.request.urlopen("https://dolarapi.com/v1/dolares", timeout=3) as r:
-            data = json.loads(r.read())
-        mep = next((d for d in data if d["casa"] == "bolsa"), None)
-        if mep and mep.get("venta"):
-            return 1.0 / float(mep["venta"])
-    except Exception:
-        pass
-    return config["fx_fallback"]["ARS_to_USD"]
-
-# ── Core analytics ────────────────────────────────────────────────────────────
-
-@dataclass
-class PortfolioSummary:
-    client_id: str
-    client_name: str
-    risk_profile: str
-    base_currency: str
-    total_value_usd: float
-    holdings: pd.DataFrame          # enriquecido con pesos y métricas
-    expected_return: float          # % anual ponderado
-    portfolio_duration: float       # años (solo RF)
-    portfolio_risk_score: float     # 1-10 ponderado
-    hhi: float                      # Herfindahl
-    exposure_by_asset_class: dict
-    exposure_by_currency: dict
-    exposure_by_country: dict
-    recommendations: list[str]
-    warnings: list[str] = field(default_factory=list)
+REPORTS_DIR = Path(__file__).parent.parent / "reports"
+REPORTS_DIR.mkdir(exist_ok=True)
 
 
-def build_portfolio(client_id: str) -> Optional[PortfolioSummary]:
-    cfg     = load_config()
-    clients = load_clients()
-    hold    = load_holdings()
-    master  = load_master()
+def _color_risk(score: float) -> str:
+    if score <= 3:   return "#1A7A4A"
+    if score <= 6:   return "#B8860B"
+    return "#C0392B"
 
-    client_row = clients[clients["client_id"] == client_id]
-    if client_row.empty:
-        return None
-    client = client_row.iloc[0]
+def _color_pct(val: float, limit: float) -> str:
+    return "#C0392B" if val > limit else "#1B2A4A"
 
-    h = hold[hold["client_id"] == client_id].copy()
-    if h.empty:
-        return None
 
-    # Merge con master para defaults
-    h = h.merge(master.add_prefix("m_").rename(columns={"m_ticker":"ticker"}),
-                on="ticker", how="left")
+def generate_html_report(ps: PortfolioSummary) -> str:
+    cfg = load_config()
+    today = date.today().strftime("%d/%m/%Y")
+    profile = ps.risk_profile.capitalize()
 
-    # FX
-    fx = get_fx_ars_to_usd(cfg)
+    # Holdings table rows
+    rows_html = ""
+    for _, row in ps.holdings.iterrows():
+        dur = f"{row['duration']:.1f}" if row.get('duration', 0) > 0 else "—"
+        ytm = f"{row['ytm']:.1f}%" if row.get('ytm', 0) > 0 else "—"
+        rows_html += f"""
+        <tr>
+          <td><b>{row['ticker']}</b></td>
+          <td>{row.get('instrument_name','')}</td>
+          <td>{row.get('asset_class','')}</td>
+          <td>{row.get('currency','')}</td>
+          <td style="text-align:right">${row['market_value_usd']:,.0f}</td>
+          <td style="text-align:right"><b>{row['weight']:.1f}%</b></td>
+          <td style="text-align:center">{ytm}</td>
+          <td style="text-align:center">{dur}</td>
+          <td style="text-align:center;color:{_color_risk(row['risk_score'])}">{row['risk_score']:.0f}/10</td>
+        </tr>"""
 
-    # ── Calcular market value en USD ──────────────────────────────────────
-    # Obtener precios de yfinance para lo que no tiene override
-    need_price = h[h["market_value_override"].isna() &
-                   h["price_override"].isna() &
-                   h["quantity"].notna()]["ticker"].tolist()
-    live_prices = fetch_prices(need_price) if need_price else {}
+    # Exposure bars
+    def bars(exp_dict: dict, title: str) -> str:
+        items = sorted(exp_dict.items(), key=lambda x: -x[1])
+        html = f"<h3>{title}</h3>"
+        for k, v in items:
+            html += f"""
+            <div class="bar-row">
+              <span class="bar-label">{k}</span>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{min(v,100):.0f}%"></div>
+              </div>
+              <span class="bar-pct">{v:.1f}%</span>
+            </div>"""
+        return html
 
-    def calc_mv(row):
-        if pd.notna(row.get("market_value_override")):
-            mv = float(row["market_value_override"])
-        else:
-            price = (row.get("price_override")
-                     or live_prices.get(row["ticker"])
-                     or 0)
-            qty = row.get("quantity") or 0
-            mv = float(qty) * float(price)
+    # Recommendations
+    recs_html = "".join(f"<li>{r}</li>" for r in ps.recommendations)
 
-        # Convertir ARS → USD
-        if str(row.get("currency","")).upper() == "ARS":
-            mv = mv * fx
-        return mv
+    # HHI interpretation
+    hhi_label = "Baja" if ps.hhi < 0.15 else ("Media" if ps.hhi < 0.25 else "Alta")
+    hhi_color = "#1A7A4A" if ps.hhi < 0.15 else ("#B8860B" if ps.hhi < 0.25 else "#C0392B")
 
-    h["market_value_usd"] = h.apply(calc_mv, axis=1)
-    total = h["market_value_usd"].sum()
-    if total == 0:
-        return None
-    h["weight"] = h["market_value_usd"] / total
+    disclaimer = cfg["report"]["disclaimer"]
+    firm = cfg["report"]["firm_name"]
 
-    # ── YTM / expected return ──────────────────────────────────────────────
-    def get_ytm(row):
-        if pd.notna(row.get("ytm_override")):
-            return float(row["ytm_override"])
-        if pd.notna(row.get("m_default_ytm")):
-            return float(row["m_default_ytm"])
-        ac = str(row.get("asset_class","")).strip()
-        return cfg["expected_return"].get(ac, cfg["expected_return"]["Equity"])
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagnóstico de Cartera — {ps.client_name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: 'DM Sans', sans-serif; background: #F4F6FA; color: #1B2A4A; font-size: 13px; }}
+  .page {{ max-width: 960px; margin: 0 auto; background: white; }}
 
-    h["ytm"] = h.apply(get_ytm, axis=1)
-    expected_return = (h["weight"] * h["ytm"]).sum()
+  /* Header */
+  .header {{ background: #1B2A4A; color: white; padding: 36px 48px 28px; }}
+  .header-top {{ display: flex; justify-content: space-between; align-items: flex-start; }}
+  .firm-name {{ font-family: 'DM Serif Display', serif; font-size: 22px; letter-spacing: 0.5px; }}
+  .report-date {{ font-size: 11px; opacity: .7; text-align: right; }}
+  .client-block {{ margin-top: 20px; border-top: 1px solid rgba(255,255,255,.2); padding-top: 16px; }}
+  .client-name {{ font-family: 'DM Serif Display', serif; font-size: 28px; }}
+  .client-meta {{ display: flex; gap: 24px; margin-top: 6px; font-size: 11px; opacity: .8; }}
+  .badge {{ background: rgba(255,255,255,.15); padding: 3px 10px; border-radius: 20px; }}
 
-    # ── Duration (solo RF) ────────────────────────────────────────────────
-    def get_dur(row):
-        if pd.notna(row.get("duration_override")):
-            return float(row["duration_override"])
-        if pd.notna(row.get("m_default_duration")):
-            return float(row["m_default_duration"])
-        return 0.0
+  /* KPI cards */
+  .kpis {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: #E8EDF5; }}
+  .kpi {{ background: white; padding: 20px 24px; }}
+  .kpi-label {{ font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #6B7C9B; font-weight: 600; }}
+  .kpi-value {{ font-family: 'DM Serif Display', serif; font-size: 28px; color: #1B2A4A; margin-top: 4px; }}
+  .kpi-sub {{ font-size: 10px; color: #9AAABE; margin-top: 2px; }}
 
-    h["duration"] = h.apply(get_dur, axis=1)
-    rf_mask = h["asset_class"].isin(["RF"])
-    rf_total = h.loc[rf_mask, "market_value_usd"].sum()
-    if rf_total > 0:
-        portfolio_duration = (
-            h.loc[rf_mask, "market_value_usd"] * h.loc[rf_mask, "duration"]
-        ).sum() / rf_total
-    else:
-        portfolio_duration = 0.0
+  /* Sections */
+  .section {{ padding: 32px 48px; border-bottom: 1px solid #E8EDF5; }}
+  .section-title {{ font-family: 'DM Serif Display', serif; font-size: 20px; color: #2E4D8A; margin-bottom: 20px;
+                    padding-bottom: 10px; border-bottom: 2px solid #E8EDF5; }}
 
-    # ── Risk score ────────────────────────────────────────────────────────
-    def get_risk(row):
-        if pd.notna(row.get("risk_score_override")):
-            return float(row["risk_score_override"])
-        if pd.notna(row.get("m_default_risk_score")):
-            return float(row["m_default_risk_score"])
-        itype = str(row.get("instrument_type","cash")).lower()
-        return cfg["default_risk_score"].get(itype, 5)
+  /* Table */
+  table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+  th {{ background: #1B2A4A; color: white; padding: 8px 10px; text-align: left; font-weight: 500;
+        font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }}
+  td {{ padding: 8px 10px; border-bottom: 1px solid #F0F3F9; }}
+  tr:hover td {{ background: #F8FAFD; }}
+  tr:nth-child(even) td {{ background: #FAFBFD; }}
+  tr:nth-child(even):hover td {{ background: #F0F3F9; }}
 
-    h["risk_score"] = h.apply(get_risk, axis=1)
-    portfolio_risk = (h["weight"] * h["risk_score"]).sum()
+  /* Exposure bars */
+  .exposure-grid {{ display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }}
+  .bar-row {{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }}
+  .bar-label {{ width: 100px; font-size: 11px; color: #4A5C7A; flex-shrink: 0; }}
+  .bar-track {{ flex: 1; height: 6px; background: #E8EDF5; border-radius: 3px; overflow: hidden; }}
+  .bar-fill {{ height: 100%; background: linear-gradient(90deg, #2E4D8A, #4A7FC1); border-radius: 3px; }}
+  .bar-pct {{ width: 38px; font-size: 11px; font-weight: 600; color: #1B2A4A; text-align: right; }}
+  h3 {{ font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: #6B7C9B;
+        font-weight: 600; margin-bottom: 12px; }}
 
-    # ── HHI ──────────────────────────────────────────────────────────────
-    hhi = (h["weight"] ** 2).sum()
+  /* Recommendations */
+  .recs ul {{ padding-left: 0; list-style: none; }}
+  .recs li {{ padding: 12px 16px; margin-bottom: 8px; border-radius: 6px;
+              background: #F4F6FA; border-left: 3px solid #2E4D8A;
+              line-height: 1.5; font-size: 12.5px; }}
 
-    # ── Exposures ────────────────────────────────────────────────────────
-    def exposure(col):
-        return (h.groupby(col)["weight"].sum() * 100).round(1).to_dict()
+  /* Footer */
+  .footer {{ padding: 24px 48px; background: #F4F6FA; }}
+  .disclaimer {{ font-size: 10px; color: #9AAABE; line-height: 1.6; }}
 
-    exp_ac  = exposure("asset_class")
-    exp_cur = exposure("currency")
-    exp_cty = exposure("country")
+  @media print {{
+    body {{ background: white; }}
+    .page {{ box-shadow: none; }}
+  }}
+</style>
+</head>
+<body>
+<div class="page">
 
-    # ── Recommendations ───────────────────────────────────────────────────
-    profile = str(client["risk_profile"]).lower()
-    thr = cfg["thresholds"].get(profile, cfg["thresholds"]["moderado"])
-    recs = []
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="firm-name">PORTFOLIO LAB</div>
+      <div class="report-date">Diagnóstico de Cartera<br>{today}<br>{firm}</div>
+    </div>
+    <div class="client-block">
+      <div class="client-name">{ps.client_name}</div>
+      <div class="client-meta">
+        <span class="badge">Perfil: {profile}</span>
+        <span class="badge">Moneda base: {ps.base_currency}</span>
+        <span class="badge">Total: USD {ps.total_value_usd:,.0f}</span>
+      </div>
+    </div>
+  </div>
 
-    ar_pct = sum(v for k,v in exp_cty.items() if k == "AR")
-    eq_pct = exp_ac.get("Equity", 0)
-    cash_pct = exp_ac.get("Cash", 0)
-    ars_pct = exp_cur.get("ARS", 0)
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Retorno Esperado</div>
+      <div class="kpi-value" style="color:#1A7A4A">{ps.expected_return:.1f}%</div>
+      <div class="kpi-sub">anual ponderado</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Duration (RF)</div>
+      <div class="kpi-value">{ps.portfolio_duration:.1f}</div>
+      <div class="kpi-sub">años — Macaulay aprox.</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Riesgo Agregado</div>
+      <div class="kpi-value" style="color:{_color_risk(ps.portfolio_risk_score)}">{ps.portfolio_risk_score:.1f}<span style="font-size:14px">/10</span></div>
+      <div class="kpi-sub">score ponderado</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Concentración HHI</div>
+      <div class="kpi-value" style="color:{hhi_color}">{ps.hhi:.3f}</div>
+      <div class="kpi-sub">{hhi_label} concentración</div>
+    </div>
+  </div>
 
-    if ar_pct > thr["max_ar_pct"]:
-        recs.append(
-            f"⚠️ Alta concentración Argentina ({ar_pct:.0f}% > límite {thr['max_ar_pct']}%). "
-            f"Considerar aumentar exposición a ETFs globales (SPY, QQQ) o activos dolarizados en exterior."
-        )
-    if eq_pct > thr["max_equity_pct"]:
-        recs.append(
-            f"⚠️ Renta variable elevada ({eq_pct:.0f}%) para perfil {profile}. "
-            f"Límite sugerido: {thr['max_equity_pct']}%. Rotar a renta fija de calidad."
-        )
-    if portfolio_duration > thr["max_duration"]:
-        recs.append(
-            f"⚠️ Duration de cartera alta ({portfolio_duration:.1f} años) para perfil {profile}. "
-            f"Máximo sugerido: {thr['max_duration']} años. Acortar via LECAPs o instrumentos cortos."
-        )
-    if cash_pct > thr["max_cash_pct"]:
-        recs.append(
-            f"💡 Exceso de liquidez ({cash_pct:.0f}%). "
-            f"Considerar colocar parte en instrumentos acordes al perfil {profile}."
-        )
-    if cash_pct < thr["min_cash_pct"]:
-        recs.append(
-            f"💡 Liquidez baja ({cash_pct:.0f}%). "
-            f"Mantener al menos {thr['min_cash_pct']}% en cash o money market."
-        )
-    if hhi > thr["max_hhi"]:
-        recs.append(
-            f"⚠️ Concentración alta (HHI={hhi:.2f} > {thr['max_hhi']}). "
-            f"Diversificar: agregar más instrumentos o reducir posiciones grandes."
-        )
-    if portfolio_risk > thr["max_risk_score"]:
-        recs.append(
-            f"⚠️ Riesgo agregado ({portfolio_risk:.1f}/10) supera el límite para perfil {profile} "
-            f"({thr['max_risk_score']}/10). Revisar posiciones de mayor riesgo."
-        )
-    if ars_pct > 50 and profile == "conservador":
-        recs.append(
-            f"💡 Alta exposición en ARS ({ars_pct:.0f}%). "
-            f"Perfil conservador se beneficia de cobertura en USD o instrumentos dólar-linked."
-        )
-    if not recs:
-        recs.append("✅ La cartera está alineada con el perfil de riesgo. Sin observaciones críticas.")
+  <!-- HOLDINGS -->
+  <div class="section">
+    <div class="section-title">Posiciones</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th><th>Instrumento</th><th>Clase</th><th>Moneda</th>
+          <th style="text-align:right">Val. USD</th>
+          <th style="text-align:right">Peso %</th>
+          <th style="text-align:center">TIR/Yield</th>
+          <th style="text-align:center">Duration</th>
+          <th style="text-align:center">Riesgo</th>
+        </tr>
+      </thead>
+      <tbody>{rows_html}</tbody>
+    </table>
+  </div>
 
-    # Preparar holdings display
-    display_cols = ["ticker","instrument_name","instrument_type","currency","country",
-                    "asset_class","market_value_usd","weight","ytm","duration","risk_score"]
-    display_cols = [c for c in display_cols if c in h.columns]
-    h_display = h[display_cols].copy()
-    h_display["market_value_usd"] = h_display["market_value_usd"].round(0)
-    h_display["weight"] = (h_display["weight"] * 100).round(1)
-    h_display["ytm"]    = h_display["ytm"].round(2)
-    h_display["duration"] = h_display["duration"].round(2)
-    h_display["risk_score"] = h_display["risk_score"].round(1)
-    h_display = h_display.sort_values("weight", ascending=False).reset_index(drop=True)
+  <!-- EXPOSICIÓN -->
+  <div class="section">
+    <div class="section-title">Exposición</div>
+    <div class="exposure-grid">
+      {bars(ps.exposure_by_asset_class, "Por Clase de Activo")}
+      {bars(ps.exposure_by_currency, "Por Moneda")}
+      {bars(ps.exposure_by_country, "Por País")}
+    </div>
+  </div>
 
-    return PortfolioSummary(
-        client_id=client_id,
-        client_name=client["client_name"],
-        risk_profile=profile,
-        base_currency=client["base_currency"],
-        total_value_usd=round(total, 0),
-        holdings=h_display,
-        expected_return=round(expected_return, 2),
-        portfolio_duration=round(portfolio_duration, 2),
-        portfolio_risk_score=round(portfolio_risk, 2),
-        hhi=round(hhi, 4),
-        exposure_by_asset_class=exp_ac,
-        exposure_by_currency=exp_cur,
-        exposure_by_country=exp_cty,
-        recommendations=recs,
-    )
+  <!-- RECOMENDACIONES -->
+  <div class="section recs">
+    <div class="section-title">Recomendaciones</div>
+    <ul>{recs_html}</ul>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="disclaimer"><b>Disclaimer:</b> {disclaimer}</div>
+  </div>
+
+</div>
+</body>
+</html>"""
+    return html
+
+
+def save_report(ps: PortfolioSummary) -> Path:
+    html = generate_html_report(ps)
+    path = REPORTS_DIR / f"reporte_{ps.client_id}_{date.today().isoformat()}.html"
+    path.write_text(html, encoding="utf-8")
+    return path
