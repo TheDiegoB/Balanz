@@ -144,6 +144,14 @@ def build_portfolio(client_id: str) -> Optional[PortfolioSummary]:
     h = h.merge(master.add_prefix("m_").rename(columns={"m_ticker":"ticker"}),
                 on="ticker", how="left")
 
+    # ── El master pisa la clasificación del parser ────────────────────────────
+    # Para tickers conocidos, usamos asset_class, instrument_type, currency y country del master
+    for col, m_col in [("asset_class","m_asset_class"), ("instrument_type","m_instrument_type"),
+                       ("currency","m_currency"), ("country","m_country")]:
+        if m_col in h.columns:
+            mask = h[m_col].notna() & (h[m_col] != "")
+            h.loc[mask, col] = h.loc[mask, m_col]
+
     # Intentar leer TC del PDF si fue guardado en holdings
     tc_from_pdf = None
     if "tc_mep" in h.columns:
