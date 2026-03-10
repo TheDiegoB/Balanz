@@ -59,10 +59,12 @@ fx_fallback:
 
 # Branding del reporte
 report:
-  firm_name:    "Balanz — Asesor Independiente"
+  firm_name:    "Z Capital"
+  advisor_name: "Asesor Independiente — Balanz"
   disclaimer:   >
     Este informe tiene carácter exclusivamente informativo y no constituye 
     asesoramiento de inversión personalizado. Los valores de mercado y rendimientos 
     pueden variar. Las recomendaciones se basan en parámetros generales del perfil 
     del inversor. Balanz Capital Valores S.A. — ALyCI N°273/CNV.
-  logo_text:    "PORTFOLIO LAB"
+  logo_text:    "Z CAPITAL"
+  app_title:    "Portfolio Lab — Z Capital"
