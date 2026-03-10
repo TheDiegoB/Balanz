@@ -78,13 +78,22 @@ def fetch_prices(tickers: list[str]) -> dict[str, float]:
         pass
     return prices
 
-def get_fx_rates(config: dict) -> dict:
-    """Retorna {MEP: X, CCL: X, Oficial: X} ARS por 1 USD"""
-    fallback_rate = 1.0 / config["fx_fallback"]["ARS_to_USD"]
+def get_fx_rates(config: dict, tc_from_pdf: float = None) -> dict:
+    """Retorna {MEP: X, CCL: X, Oficial: X} ARS por 1 USD.
+    Prioridad: dolarapi en vivo → TC del PDF → fallback config.
+    """
+    # Fallback base — actualizado manualmente en config.yaml
+    fallback_rate = config["fx_fallback"].get("MEP", None) or (1.0 / config["fx_fallback"]["ARS_to_USD"])
     rates = {"MEP": fallback_rate, "CCL": fallback_rate, "Oficial": fallback_rate}
+
+    # Si viene el TC del PDF, usarlo como fallback intermedio (más fresco que config)
+    if tc_from_pdf and tc_from_pdf > 100:
+        rates = {"MEP": tc_from_pdf, "CCL": tc_from_pdf * 1.03, "Oficial": tc_from_pdf}
+
+    # Intentar API en vivo
     try:
         import urllib.request, json
-        with urllib.request.urlopen("https://dolarapi.com/v1/dolares", timeout=3) as r:
+        with urllib.request.urlopen("https://dolarapi.com/v1/dolares", timeout=4) as r:
             data = json.loads(r.read())
         for d in data:
             if d["casa"] == "bolsa"           and d.get("venta"): rates["MEP"]     = float(d["venta"])
@@ -135,7 +144,13 @@ def build_portfolio(client_id: str) -> Optional[PortfolioSummary]:
     h = h.merge(master.add_prefix("m_").rename(columns={"m_ticker":"ticker"}),
                 on="ticker", how="left")
 
-    fx_rates = get_fx_rates(cfg)
+    # Intentar leer TC del PDF si fue guardado en holdings
+    tc_from_pdf = None
+    if "tc_mep" in h.columns:
+        tc_vals = pd.to_numeric(h["tc_mep"], errors="coerce").dropna()
+        if not tc_vals.empty:
+            tc_from_pdf = float(tc_vals.iloc[0])
+    fx_rates = get_fx_rates(cfg, tc_from_pdf=tc_from_pdf)
     fx = 1.0 / fx_rates["MEP"]  # ARS -> USD
 
     # ── Precios live ──────────────────────────────────────────────────────────
