@@ -1,22 +1,72 @@
 ticker,instrument_type,currency,country,asset_class,default_ytm,default_duration,default_risk_score,notes
 AL30,bono,USD,AR,RF,8.5,3.2,4,Bono soberano Arg 2030 Ley Arg
-GD30,bono,USD,AR,RF,7.8,3.5,4,Bono soberano Arg 2030 Ley NY
-GD35,bono,USD,AR,RF,9.8,6.1,5,Bono soberano Arg 2035 Ley NY
+AE38,bono,USD,AR,RF,9.2,8.5,4,Bono soberano Arg 2038 Ley Arg
+AL35,bono,USD,AR,RF,9.0,5.5,4,Bono soberano Arg 2035 Ley Arg
+AL41,bono,USD,AR,RF,9.5,11.0,4,Bono soberano Arg 2041 Ley Arg
+GD29,bono,USD,AR,RF,8.0,2.5,4,Global Arg 2029 Ley NY
+GD30,bono,USD,AR,RF,7.8,3.5,4,Global Arg 2030 Ley NY
+GD35,bono,USD,AR,RF,9.8,6.1,5,Global Arg 2035 Ley NY
+GD38,bono,USD,AR,RF,9.2,8.5,4,Global Arg 2038 Ley NY
+GD41,bono,USD,AR,RF,9.5,10.0,4,Global Arg 2041 Ley NY
+GD46,bono,USD,AR,RF,9.8,12.0,5,Global Arg 2046 Ley NY
+CUAP,bono,USD,AR,RF,7.0,5.0,4,Bono Cuasi Par
+BPY26,bono,USD,AR,RF,7.0,0.5,3,Bopreal Serie 3 2026
 PAMP2027,on,USD,AR,RF,7.5,2.5,3,ON Pampa Energía 2027
 YPF2026,on,USD,AR,RF,7.2,1.8,4,ON YPF 2026
 LOMA2025,on,USD,AR,RF,7.0,0.9,3,ON Loma Negra 2025
 VIST2027,on,USD,AR,RF,8.2,2.8,4,ON Vista Energy 2027
 S31E5,bono,ARS,AR,RF,60.0,0.2,2,LECAP Ene 2025
-TX26,bono,ARS,AR,RF,0.0,1.5,2,Boncer 2026 (CER+3%)
-TV25,bono,ARS,AR,RF,0.0,0.6,2,Bono Dólar Linked TV25
+TX26,bono,ARS,AR,RF,55.0,1.5,2,Boncer 2026 (CER+3%)
+TV25,bono,ARS,AR,RF,55.0,0.6,2,Bono Dólar Linked TV25
 SIGMA_RF,fondo,ARS,AR,RF,50.0,0.1,2,FCI Sigma Renta Fija ARS
 BALANZ_CAP,fondo,USD,AR,RF,6.5,1.5,2,FCI Balanz Capital USD
-SPY,etf,USD,US,Equity,,0,6,S&P 500 ETF
-QQQ,etf,USD,US,Equity,,0,7,Nasdaq 100 ETF
-GLD,etf,USD,Global,Alternatives,,0,5,Gold ETF
-IAU,etf,USD,Global,Alternatives,,0,5,Gold ETF iShares
-AAPL,equity,USD,US,Equity,,0,7,Apple CEDEAR
-GGAL,equity,ARS,AR,Equity,,0,8,Grupo Galicia
-YPFD,equity,ARS,AR,Equity,,0,8,YPF SA
+BCACCA,fondo,ARS,AR,Equity,10.0,0,3,FCI Balanz Acciones Arg A
+BCMMA,fondo,ARS,AR,Cash,55.0,0.1,1,FCI Balanz Money Market A
+BINFRAA,fondo,ARS,AR,Alternatives,6.0,0,3,FCI Balanz Infraestructura A
+LONGPesosA,fondo,ARS,AR,RF,55.0,0.5,2,FCI Balanz Long Pesos A
+PER2A,fondo,ARS,AR,RF,60.0,0.3,2,FCI Lecaps A
+PER3A,fondo,ARS,AR,RF,7.5,1.5,3,FCI ONs A
+ESTRA1A,fondo,USD,AR,Cash,5.0,0.1,1,FCI Dolar Corto Plazo A
+ESTRA3A,fondo,USD,Global,Alternatives,5.0,0,3,FCI Latam A
+BCRDolarA,fondo,USD,AR,RF,8.0,3.0,3,FCI Soberano A
+BAHUSDA,fondo,USD,AR,RF,7.5,1.5,3,FCI Corporativo A
+BINCOME,fondo,USD,Global,RF,6.0,3.0,3,Balanz Income DAC
+SPY,etf,ARS,US,Equity,10.0,0,6,S&P 500 ETF CEDEAR
+QQQ,etf,ARS,US,Equity,10.0,0,7,Nasdaq 100 ETF CEDEAR
+GLD,etf,ARS,Global,Alternatives,4.0,0,4,Gold ETF CEDEAR
+IAU,etf,ARS,Global,Alternatives,4.0,0,4,Gold ETF iShares CEDEAR
+IBIT,etf,ARS,Global,Alternatives,0.0,0,8,Bitcoin ETF CEDEAR
+XLE,etf,ARS,US,Alternatives,5.0,0,6,Energy Sector ETF CEDEAR
+XLK,etf,ARS,US,Equity,10.0,0,6,Technology Sector ETF CEDEAR
+EEM,etf,ARS,Global,Equity,9.0,0,6,iShares MSCI EM CEDEAR
+EWZ,etf,ARS,Global,Equity,9.0,0,7,iShares MSCI Brazil CEDEAR
+EWJ,etf,ARS,Global,Equity,8.0,0,5,iShares MSCI Japan CEDEAR
+AAPL,equity,ARS,US,Equity,10.0,0,7,Apple CEDEAR
+MSFT,equity,ARS,US,Equity,10.0,0,7,Microsoft CEDEAR
+GOOGL,equity,ARS,US,Equity,10.0,0,7,Alphabet CEDEAR
+AMZN,equity,ARS,US,Equity,10.0,0,7,Amazon CEDEAR
+META,equity,ARS,US,Equity,10.0,0,7,Meta CEDEAR
+MELI,equity,ARS,AR,Equity,12.0,0,7,MercadoLibre CEDEAR
+VIST,equity,ARS,AR,Equity,12.0,0,7,Vista Energy ADS CEDEAR
+COIN,equity,ARS,US,Alternatives,0.0,0,8,Coinbase CEDEAR
+JPM,equity,ARS,US,Equity,10.0,0,6,JP Morgan CEDEAR
+JNJ,equity,ARS,US,Equity,8.0,0,5,Johnson & Johnson CEDEAR
+WMT,equity,ARS,US,Equity,9.0,0,5,Walmart CEDEAR
+PG,equity,ARS,US,Equity,8.0,0,5,Procter & Gamble CEDEAR
+IBM,equity,ARS,US,Equity,9.0,0,6,IBM CEDEAR
+GE,equity,ARS,US,Equity,10.0,0,6,General Electric CEDEAR
+AMD,equity,ARS,US,Equity,10.0,0,7,AMD CEDEAR
+MO,equity,ARS,US,Equity,8.0,0,5,Altria CEDEAR
+QCOM,equity,ARS,US,Equity,10.0,0,6,Qualcomm CEDEAR
+GGAL,equity,ARS,AR,Equity,12.0,0,8,Grupo Galicia
+YPFD,equity,ARS,AR,Equity,12.0,0,8,YPF SA
+BMA,equity,ARS,AR,Equity,12.0,0,7,Banco Macro
+CEPU,equity,ARS,AR,Equity,12.0,0,7,Central Puerto
+PAMP,equity,ARS,AR,Equity,12.0,0,7,Pampa Energía
+TXAR,equity,ARS,AR,Equity,12.0,0,7,Ternium Argentina
+LOMA,equity,ARS,AR,Equity,11.0,0,7,Loma Negra
+TGNO4,equity,ARS,AR,Equity,12.0,0,7,Transportadora Gas Norte
+TGSU2,equity,ARS,AR,Equity,12.0,0,7,Transportadora Gas Sur
+ECOG,equity,ARS,AR,Equity,11.0,0,7,Ecogas
 CASH_USD,cash,USD,Global,Cash,5.0,0,1,Liquidez USD / Money Market
 CASH_ARS,cash,ARS,AR,Cash,55.0,0,1,Liquidez ARS / Money Market
