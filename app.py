@@ -1,4 +1,4 @@
-"""Portfolio Lab — Streamlit App v3 — PDF upload directo"""
+"""Portfolio Lab — Z Capital — Streamlit App v3"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -16,51 +16,102 @@ except Exception as e:
     st.error(f"❌ Error al cargar módulos: {e}")
     st.stop()
 
-st.set_page_config(page_title="Portfolio Lab", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
+cfg_global = load_config()
+APP_TITLE = cfg_global.get("report", {}).get("app_title", "Portfolio Lab — Z Capital")
 
-st.markdown("""
+st.set_page_config(page_title=APP_TITLE, page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
+
+GOLD   = "#C9A84C"
+DARK   = "#0A0A0A"
+NAVY   = "#1B2A4A"
+BLUE   = "#2E4D8A"
+
+st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
-html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
-[data-testid="stSidebar"] { background: #1B2A4A; }
-[data-testid="stSidebar"] * { color: white !important; }
-[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] { background: rgba(255,255,255,0.05) !important; border: 1px dashed rgba(255,255,255,0.3) !important; border-radius: 8px !important; }
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] { background: #2E4D8A !important; color: white !important; border: 1px solid #4A7FC1 !important; border-radius: 6px !important; }
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover { background: #4A7FC1 !important; }
-[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] * { color: rgba(255,255,255,0.45) !important; font-size: 11px !important; }
-[data-testid="stMetric"] { background: white; border: 1px solid #E8EDF5; border-radius: 10px; padding: 16px 20px !important; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-[data-testid="stMetricLabel"] { font-size: 11px !important; text-transform: uppercase; letter-spacing: .6px; color: #6B7C9B !important; }
-[data-testid="stMetricValue"] { font-family: 'DM Serif Display', serif !important; font-size: 26px !important; color: #1B2A4A !important; }
-h1 { font-family: 'DM Serif Display', serif !important; color: #1B2A4A !important; }
-h2, h3 { color: #2E4D8A !important; }
-.section-header { font-family: 'DM Serif Display', serif; font-size: 20px; color: #1B2A4A; border-bottom: 2px solid #E8EDF5; padding-bottom: 8px; margin: 24px 0 16px; }
-.rec-item { background: #F4F6FA; border-left: 3px solid #2E4D8A; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
-.rec-ok   { border-left-color: #1A7A4A; background: #F0FBF4; }
-.rec-warn { border-left-color: #C0392B; background: #FDF4F3; }
-.profile-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-left: 10px; }
-.badge-conservador { background: #D6F5E3; color: #1A7A4A; }
-.badge-moderado    { background: #FFF3CD; color: #856404; }
-.badge-agresivo    { background: #FADBD8; color: #C0392B; }
-.fx-bar { background: #F4F6FA; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #4A5C7A; margin-bottom: 12px; }
-.upload-hint { background: rgba(255,255,255,0.07); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: rgba(255,255,255,0.55) !important; line-height: 1.6; margin-top: 6px; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {{ background: {DARK} !important; border-right: 1px solid #1a1a1a; }}
+[data-testid="stSidebar"] * {{ color: #E0E0E0 !important; }}
+[data-testid="stSidebar"] label {{ color: #A0A0A0 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: .5px; }}
+
+/* Selectbox en sidebar */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {{
+    background: #1a1a1a !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px !important;
+    color: white !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] svg {{ fill: {GOLD} !important; }}
+
+/* File uploader */
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {{
+    background: #111 !important;
+    border: 1px dashed {GOLD}55 !important;
+    border-radius: 8px !important;
+}}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {{
+    background: #1a1a1a !important;
+    color: {GOLD} !important;
+    border: 1px solid {GOLD}66 !important;
+    border-radius: 6px !important;
+}}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {{
+    background: {GOLD}22 !important;
+    border-color: {GOLD} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] * {{
+    color: #555 !important; font-size: 11px !important;
+}}
+
+/* Métricas */
+[data-testid="stMetric"] {{
+    background: white; border: 1px solid #E8EDF5;
+    border-radius: 10px; padding: 16px 20px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}}
+[data-testid="stMetricLabel"] {{ font-size: 11px !important; text-transform: uppercase; letter-spacing: .6px; color: #6B7C9B !important; }}
+[data-testid="stMetricValue"] {{ font-family: 'DM Serif Display', serif !important; font-size: 26px !important; color: {NAVY} !important; }}
+
+h1 {{ font-family: 'DM Serif Display', serif !important; color: {NAVY} !important; }}
+h2, h3 {{ color: {BLUE} !important; }}
+.section-header {{ font-family: 'DM Serif Display', serif; font-size: 20px; color: {NAVY}; border-bottom: 2px solid #E8EDF5; padding-bottom: 8px; margin: 24px 0 16px; }}
+.rec-item {{ background: #F4F6FA; border-left: 3px solid {BLUE}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }}
+.rec-ok   {{ border-left-color: #1A7A4A; background: #F0FBF4; }}
+.rec-warn {{ border-left-color: #C0392B; background: #FDF4F3; }}
+.profile-badge {{ display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-left: 10px; }}
+.badge-conservador {{ background: #D6F5E3; color: #1A7A4A; }}
+.badge-moderado    {{ background: #FFF3CD; color: #856404; }}
+.badge-agresivo    {{ background: #FADBD8; color: #C0392B; }}
+.fx-bar {{ background: #F4F6FA; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #4A5C7A; margin-bottom: 12px; }}
+.upload-hint {{ background: #111; border-radius: 8px; padding: 10px 12px; font-size: 11px; color: #666 !important; line-height: 1.6; margin-top: 6px; }}
+.zcap-logo {{ font-family: 'DM Serif Display', serif; font-size: 22px; color: {GOLD}; letter-spacing: 2px; font-weight: 700; }}
+.zcap-sub  {{ font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-top: -4px; }}
+.sidebar-divider {{ border: none; border-top: 1px solid #1a1a1a; margin: 12px 0; }}
+.client-card {{ background: #111; border: 1px solid #222; border-radius: 8px; padding: 12px 14px; margin: 8px 0; }}
+.client-name {{ font-size: 14px; font-weight: 600; color: white !important; }}
+.client-meta {{ font-size: 11px; color: #666 !important; margin-top: 2px; }}
 </style>
 """, unsafe_allow_html=True)
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 📊 Portfolio Lab")
-    st.markdown("---")
+    # Logo Z Capital
+    st.markdown('<div class="zcap-logo">Z CAPITAL</div>', unsafe_allow_html=True)
+    st.markdown('<div class="zcap-sub">Portfolio Lab</div>', unsafe_allow_html=True)
+    st.markdown('<hr class="sidebar-divider">', unsafe_allow_html=True)
 
-    # PDF upload — flujo principal
-    st.markdown("##### 📄 Cargar Resumen Balanz")
+    # PDF upload
+    st.markdown('<div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📄 Cargar Resumen Balanz</div>', unsafe_allow_html=True)
     pdf_files = st.file_uploader(
-        "Subí uno o varios PDFs",
+        "PDF Balanz",
         type="pdf",
         accept_multiple_files=True,
         key="pdf_upload",
-        help="ResumenDeCuenta_YYYYMMDD.pdf"
+        label_visibility="collapsed",
     )
-    st.markdown('<div class="upload-hint">Arrastrá el PDF que descargás de Balanz.<br>Se agrega automáticamente al sistema.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="upload-hint">Arrastrá el ResumenDeCuenta.pdf de Balanz. Se procesa automáticamente.</div>', unsafe_allow_html=True)
 
     if pdf_files:
         DATA_DIR.mkdir(exist_ok=True)
@@ -102,55 +153,72 @@ with st.sidebar:
             st.cache_data.clear()
             st.rerun()
 
-    st.markdown("---")
+    st.markdown('<hr class="sidebar-divider">', unsafe_allow_html=True)
 
     # Selector de cliente
     try:
         clients_df = load_clients()
         if clients_df.empty:
-            st.warning("Sin clientes. Subí un PDF primero.")
+            st.markdown('<div class="upload-hint">Sin clientes. Subí un PDF para comenzar.</div>', unsafe_allow_html=True)
             st.stop()
         client_options = {r["client_id"]: r["client_name"] for _, r in clients_df.iterrows()}
-        selected_id = st.selectbox("Cliente", list(client_options.keys()),
-                                   format_func=lambda x: client_options[x])
+        st.markdown('<div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cliente</div>', unsafe_allow_html=True)
+        selected_id = st.selectbox(
+            "Cliente", list(client_options.keys()),
+            format_func=lambda x: client_options[x],
+            label_visibility="collapsed"
+        )
+        # Mini card del cliente seleccionado
+        if selected_id:
+            cl_row = clients_df[clients_df["client_id"] == selected_id].iloc[0]
+            profile = cl_row.get("risk_profile", "moderado")
+            profile_colors = {"conservador": "#1A7A4A", "moderado": "#856404", "agresivo": "#C0392B"}
+            pc = profile_colors.get(profile, "#856404")
+            st.markdown(f'''<div class="client-card">
+                <div class="client-name">{cl_row["client_name"]}</div>
+                <div class="client-meta" style="color:{pc} !important">▪ {profile.upper()}</div>
+                <div class="client-meta">{selected_id}</div>
+            </div>''', unsafe_allow_html=True)
     except Exception:
-        st.warning("Subí un PDF para comenzar.")
+        st.markdown('<div class="upload-hint">Subí un PDF para comenzar.</div>', unsafe_allow_html=True)
         st.stop()
 
-    st.markdown("---")
+    st.markdown('<hr class="sidebar-divider">', unsafe_allow_html=True)
 
-    # Perfil de riesgo editable
+    # Perfil de riesgo
+    st.markdown('<div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Perfil de riesgo</div>', unsafe_allow_html=True)
     try:
-        cl_row = clients_df[clients_df["client_id"] == selected_id].iloc[0]
-        current_profile = cl_row.get("risk_profile", "moderado")
-        new_profile = st.selectbox("Perfil de riesgo", ["conservador","moderado","agresivo"],
-                                   index=["conservador","moderado","agresivo"].index(current_profile)
-                                   if current_profile in ["conservador","moderado","agresivo"] else 1)
+        current_profile = clients_df[clients_df["client_id"]==selected_id].iloc[0].get("risk_profile","moderado")
+        new_profile = st.selectbox(
+            "Perfil", ["conservador","moderado","agresivo"],
+            index=["conservador","moderado","agresivo"].index(current_profile)
+                  if current_profile in ["conservador","moderado","agresivo"] else 1,
+            label_visibility="collapsed"
+        )
         if new_profile != current_profile:
             clients_df.loc[clients_df["client_id"]==selected_id, "risk_profile"] = new_profile
             clients_df.to_csv(DATA_DIR / "clients.csv", index=False)
-            st.cache_data.clear()
-            st.rerun()
+            st.cache_data.clear(); st.rerun()
     except Exception:
         pass
 
-    st.markdown("---")
+    st.markdown('<hr class="sidebar-divider">', unsafe_allow_html=True)
 
     # CSV avanzado (colapsado)
-    with st.expander("⚙️ Edición manual CSV"):
+    with st.expander("⚙️ CSV manual"):
         up_h = st.file_uploader("holdings.csv", type="csv", key="h")
         if up_h:
             (DATA_DIR/"holdings.csv").write_bytes(up_h.read())
-            st.success("✅ Actualizado"); st.cache_data.clear(); st.rerun()
+            st.success("✅"); st.cache_data.clear(); st.rerun()
         up_c = st.file_uploader("clients.csv", type="csv", key="c")
         if up_c:
             (DATA_DIR/"clients.csv").write_bytes(up_c.read())
-            st.success("✅ Actualizado"); st.cache_data.clear(); st.rerun()
+            st.success("✅"); st.cache_data.clear(); st.rerun()
 
-    if st.button("🔄 Recargar datos", use_container_width=True):
+    if st.button("🔄 Recargar", use_container_width=True):
         st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div style="font-size:10px;opacity:.3;margin-top:8px">Portfolio Lab v3.0</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:10px;color:#333;margin-top:16px;text-align:center">Z Capital © 2026</div>', unsafe_allow_html=True)
 
 # ── Cargar portfolio ──────────────────────────────────────────────────────────
 @st.cache_data(ttl=120, show_spinner=False)
@@ -170,7 +238,7 @@ with c1:
                 unsafe_allow_html=True)
     mep = ps.fx_rates.get("MEP", 0)
     ccl = ps.fx_rates.get("CCL", 0)
-    st.markdown(f'<div class="fx-bar">💱 TC en vivo — MEP: <b>${mep:,.0f}</b> &nbsp;|&nbsp; CCL: <b>${ccl:,.0f}</b></div>',
+    st.markdown(f'<div class="fx-bar">💱 TC en vivo — MEP: <b>${mep:,.0f}</b> &nbsp;|&nbsp; CCL: <b>${ccl:,.0f}</b> &nbsp;·&nbsp; <span style="color:#C9A84C;font-weight:600">Z Capital</span></div>',
                 unsafe_allow_html=True)
 with c2:
     html_content = generate_html_report(ps)
