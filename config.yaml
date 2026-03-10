@@ -54,7 +54,8 @@ reporting_currency: USD
 
 # Tipo de cambio fallback si no hay internet (actualizar manualmente)
 fx_fallback:
-  ARS_to_USD: 0.00096   # ~1040 ARS por USD (actualizar)
+  ARS_to_USD: 0.000704   # ~1420 ARS por USD — actualizado 10/03/2026
+  MEP: 1420              # TC MEP fallback — actualizar si dolarapi falla
 
 # Branding del reporte
 report:
