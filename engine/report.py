@@ -143,7 +143,7 @@ def generate_html_report(ps: PortfolioSummary) -> str:
   <!-- HEADER -->
   <div class="header">
     <div class="header-top">
-      <div class="firm-name">PORTFOLIO LAB</div>
+      <div class="firm-name">Z CAPITAL &nbsp;<span style="font-size:13px;letter-spacing:3px;opacity:.6">PORTFOLIO LAB</span></div>
       <div class="report-date">Diagnóstico de Cartera<br>{today}<br>{firm}</div>
     </div>
     <div class="client-block">
