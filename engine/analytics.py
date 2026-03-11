@@ -196,13 +196,30 @@ def build_portfolio(client_id: str) -> Optional[PortfolioSummary]:
 
     # ── YTM ───────────────────────────────────────────────────────────────────
     def get_ytm(row):
-        if pd.notna(row.get("ytm_override")):   return float(row["ytm_override"])
-        if pd.notna(row.get("m_default_ytm")):  return float(row["m_default_ytm"])
+        if pd.notna(row.get("ytm_override")) and str(row.get("ytm_override","")) not in ["","nan"]:
+            return float(row["ytm_override"])
+        if pd.notna(row.get("m_default_ytm")) and str(row.get("m_default_ytm","")) not in ["","nan"]:
+            return float(row["m_default_ytm"])
         ac = str(row.get("asset_class","")).strip()
         return cfg["expected_return"].get(ac, cfg["expected_return"]["Equity"])
 
-    h["ytm"] = h.apply(get_ytm, axis=1)
-    expected_return = (h["weight"] * h["ytm"]).sum()
+    h["ytm_raw"] = h.apply(get_ytm, axis=1)
+
+    # ── Convertir TIRs en ARS a equivalente USD ───────────────────────────────
+    # Fórmula: TIR_USD = (1 + TIR_ARS) / (1 + devaluacion_anual) - 1
+    # Supuesto de devaluación configurable en config.yaml (default: 25% anual)
+    deval = cfg.get("devaluacion_anual_pct", 25.0) / 100.0
+
+    def ytm_to_usd(row):
+        cur = str(row.get("currency_orig", row.get("currency","USD"))).upper()
+        ytm = row["ytm_raw"]
+        # Si la moneda es ARS y la TIR es >15%, claramente es una TNA en pesos
+        if cur == "ARS" and ytm > 15:
+            return round(((1 + ytm / 100) / (1 + deval) - 1) * 100, 2)
+        return ytm
+
+    h["ytm"] = h.apply(ytm_to_usd, axis=1)
+    expected_return = round((h["weight"] * h["ytm"]).sum(), 2)
 
     # ── Duration ──────────────────────────────────────────────────────────────
     def get_dur(row):
