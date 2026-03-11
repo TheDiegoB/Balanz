@@ -68,3 +68,32 @@ report:
     del inversor. Balanz Capital Valores S.A. — ALyCI N°273/CNV.
   logo_text:    "Z CAPITAL"
   app_title:    "Portfolio Lab — Z Capital"
+
+# Supuesto de devaluación anual ARS/USD (para convertir TIRs en pesos a USD equivalente)
+# Crawling peg actual ~25% anual. Actualizar según expectativa de mercado.
+# Impacta en el "Retorno Esperado" de la cartera cuando hay posiciones en ARS.
+# Ejemplo: LECAP 55% TNA → (1.55/1.25) - 1 = 24% equiv. USD
+devaluacion_anual_pct: 25.0
+# Fuente: Excel GestionCartera_Balanz
+model_portfolios:
+  conservador:
+    RF:           65    # LECAPs, CER, Soberanos, ONs
+    Cash:         20    # Money market, liquidez
+    Equity:        5    # Mínima renta variable
+    Alternatives: 10    # Oro / cobertura
+  moderado:
+    RF:           45
+    Cash:         10
+    Equity:       30
+    Alternatives: 15
+  agresivo:
+    RF:           20
+    Cash:          5
+    Equity:       55
+    Alternatives: 20
+
+# Campos de ficha ampliada de cliente
+client_extended_fields:
+  horizonte_opciones: ["< 1 año", "1-3 años", "3-5 años", "> 5 años"]
+  objetivo_opciones:  ["Capital de trabajo", "Ahorro mediano plazo", "Jubilación / largo plazo", "Liquidez corporativa", "Viaje / proyecto", "Otro"]
+  tolerancia_opciones: ["Muy baja (max 2%)", "Baja (max 5%)", "Moderada (max 15%)", "Alta (max 30%)", "Muy alta (> 30%)"]
