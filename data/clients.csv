@@ -1,24 +1,24 @@
-client_id,client_name,risk_profile,base_currency
-CLI_22566,Gisbert Santiago Pedro Y/O Graziani Ines Maria,moderado,USD
-CLI_282686,Villar Maria De Los Angeles,moderado,USD
-CLI_304685,Toso Guido,moderado,USD
-CLI_305892,Miranda Lucia,moderado,USD
-CLI_506385,Gonzalez Brisighelli Victoria Graciela,moderado,USD
-CLI_643364,Pacios Noelia Belen,moderado,USD
-CLI_660056,Santillan Ines,moderado,USD
-CLI_1183060,Videla Mariana,moderado,USD
-CLI_1365529,Cosenza Matias,moderado,USD
-CLI_1375361,Gonzalez Juan Emilio,moderado,USD
-CLI_1385990,Quirelli Maximo,moderado,USD
-CLI_1395432,Lopez Fontan Rocio,moderado,USD
-CLI_1459225,Ugarte Rosario,moderado,USD
-CLI_1463223,Lopez Paula,moderado,USD
-CLI_1477220,Butler Jaime,moderado,USD
-CLI_1550463,Degano Gregorio Martin,moderado,USD
-CLI_1554161,Yedlin Magali Denise,moderado,USD
-CLI_1562613,Prickett Shannon Lynn,moderado,USD
-CLI_1568624,Rotili Diego Hernan,moderado,USD
-CLI_1576169,Irrazabal Jonas,moderado,USD
-CLI_1576380,Perez Facundo Martin,moderado,USD
-CLI_1577315,Larotonda Lanzo Lautaro,moderado,USD
-CLI_1586508,Luisello Paula Denise,moderado,USD
+client_id,client_name,risk_profile,base_currency,horizonte,objetivo,tolerancia
+CLI_1477220,Butler Jaime,moderado,USD,,,
+CLI_1365529,Cosenza Matias,moderado,USD,,,
+CLI_1550463,Degano Gregorio Martin,moderado,USD,,,
+CLI_22566,Gisbert Santiago Pedro Y/O Graziani Ines Maria,moderado,USD,,,
+CLI_506385,Gonzalez Brisighelli Victoria Graciela,moderado,USD,,,
+CLI_1375361,Gonzalez Juan Emilio,moderado,USD,,,
+CLI_1576169,Irrazabal Jonas,moderado,USD,,,
+CLI_1577315,Larotonda Lanzo Lautaro,moderado,USD,,,
+CLI_1395432,Lopez Fontan Rocio,moderado,USD,,,
+CLI_1463223,Lopez Paula,moderado,USD,,,
+CLI_1586508,Luisello Paula Denise,moderado,USD,,,
+CLI_305892,Miranda Lucia,moderado,USD,,,
+CLI_643364,Pacios Noelia Belen,moderado,USD,,,
+CLI_1576380,Perez Facundo Martin,moderado,USD,,,
+CLI_1562613,Prickett Shannon Lynn,moderado,USD,,,
+CLI_1385990,Quirelli Maximo,moderado,USD,,,
+CLI_1568624,Rotili Diego Hernan,moderado,USD,,,
+CLI_660056,Santillan Ines,moderado,USD,,,
+CLI_304685,Toso Guido,moderado,USD,,,
+CLI_1459225,Ugarte Rosario,moderado,USD,,,
+CLI_1183060,Videla Mariana,moderado,USD,,,
+CLI_282686,Villar Maria De Los Angeles,moderado,USD,,,
+CLI_1554161,Yedlin Magali Denise,moderado,USD,,,
