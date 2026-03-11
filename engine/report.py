@@ -43,20 +43,63 @@ def generate_html_report(ps: PortfolioSummary) -> str:
           <td style="text-align:center;color:{_color_risk(row['risk_score'])}">{row['risk_score']:.0f}/10</td>
         </tr>"""
 
-    # Exposure bars
-    def bars(exp_dict: dict, title: str) -> str:
-        items = sorted(exp_dict.items(), key=lambda x: -x[1])
-        html = f"<h3>{title}</h3>"
-        for k, v in items:
-            html += f"""
-            <div class="bar-row">
-              <span class="bar-label">{k}</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width:{min(v,100):.0f}%"></div>
-              </div>
-              <span class="bar-pct">{v:.1f}%</span>
+    # SVG donut chart — sin dependencias externas
+    PALETTE = ["#1B2A4A","#2E4D8A","#C9A84C","#1A7A4A","#4A7FC1","#EF476F","#B8860B","#6B4E8A","#00B4D8","#2ECC71"]
+
+    def donut(exp_dict: dict, title: str) -> str:
+        items = [(k, v) for k, v in sorted(exp_dict.items(), key=lambda x: -x[1]) if v > 0.1]
+        if not items:
+            return f"<div><h3>{title}</h3><p style='color:#9AAABE;font-size:11px'>Sin datos</p></div>"
+
+        total = sum(v for _, v in items)
+        cx, cy, r, r_inner = 80, 80, 70, 42
+        TWO_PI = 6.28318530718
+
+        # Calcular arcos
+        angle = -TWO_PI / 4  # empezar arriba
+        paths = []
+        for i, (label, val) in enumerate(items):
+            sweep = (val / total) * TWO_PI
+            x1 = cx + r * __import__('math').cos(angle)
+            y1 = cy + r * __import__('math').sin(angle)
+            x2 = cx + r * __import__('math').cos(angle + sweep)
+            y2 = cy + r * __import__('math').sin(angle + sweep)
+            ix1 = cx + r_inner * __import__('math').cos(angle)
+            iy1 = cy + r_inner * __import__('math').sin(angle)
+            ix2 = cx + r_inner * __import__('math').cos(angle + sweep)
+            iy2 = cy + r_inner * __import__('math').sin(angle + sweep)
+            large = 1 if sweep > __import__('math').pi else 0
+            color = PALETTE[i % len(PALETTE)]
+            d = (f"M {x1:.2f} {y1:.2f} "
+                 f"A {r} {r} 0 {large} 1 {x2:.2f} {y2:.2f} "
+                 f"L {ix2:.2f} {iy2:.2f} "
+                 f"A {r_inner} {r_inner} 0 {large} 0 {ix1:.2f} {iy1:.2f} Z")
+            paths.append(f'<path d="{d}" fill="{color}" stroke="white" stroke-width="1.5"/>')
+            angle += sweep
+
+        svg = f"""<svg width="160" height="160" viewBox="0 0 160 160">
+            {''.join(paths)}
+            <text x="{cx}" y="{cy+4}" text-anchor="middle"
+                  font-family="DM Serif Display,serif" font-size="11" fill="#1B2A4A">{len(items)} clases</text>
+        </svg>"""
+
+        # Leyenda
+        legend = ""
+        for i, (label, val) in enumerate(items):
+            color = PALETTE[i % len(PALETTE)]
+            legend += f"""<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                <div style="width:10px;height:10px;border-radius:2px;background:{color};flex-shrink:0"></div>
+                <span style="font-size:11px;color:#4A5C7A;flex:1">{label}</span>
+                <span style="font-size:11px;font-weight:600;color:#1B2A4A">{val:.1f}%</span>
             </div>"""
-        return html
+
+        return f"""<div>
+            <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#6B7C9B;font-weight:600;margin-bottom:12px">{title}</h3>
+            <div style="display:flex;align-items:center;gap:16px">
+                {svg}
+                <div style="flex:1">{legend}</div>
+            </div>
+        </div>"""
 
     # Recommendations
     recs_html = "".join(f"<li>{r}</li>" for r in ps.recommendations)
@@ -111,13 +154,8 @@ def generate_html_report(ps: PortfolioSummary) -> str:
   tr:nth-child(even) td {{ background: #FAFBFD; }}
   tr:nth-child(even):hover td {{ background: #F0F3F9; }}
 
-  /* Exposure bars */
+  /* Exposure donuts */
   .exposure-grid {{ display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }}
-  .bar-row {{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }}
-  .bar-label {{ width: 100px; font-size: 11px; color: #4A5C7A; flex-shrink: 0; }}
-  .bar-track {{ flex: 1; height: 6px; background: #E8EDF5; border-radius: 3px; overflow: hidden; }}
-  .bar-fill {{ height: 100%; background: linear-gradient(90deg, #2E4D8A, #4A7FC1); border-radius: 3px; }}
-  .bar-pct {{ width: 38px; font-size: 11px; font-weight: 600; color: #1B2A4A; text-align: right; }}
   h3 {{ font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: #6B7C9B;
         font-weight: 600; margin-bottom: 12px; }}
 
@@ -202,9 +240,9 @@ def generate_html_report(ps: PortfolioSummary) -> str:
   <div class="section">
     <div class="section-title">Exposición</div>
     <div class="exposure-grid">
-      {bars(ps.exposure_by_asset_class, "Por Clase de Activo")}
-      {bars(ps.exposure_by_currency, "Por Moneda")}
-      {bars(ps.exposure_by_country, "Por País")}
+      {donut(ps.exposure_by_asset_class, "Por Clase de Activo")}
+      {donut(ps.exposure_by_currency, "Por Moneda")}
+      {donut(ps.exposure_by_country, "Por País")}
     </div>
   </div>
 
